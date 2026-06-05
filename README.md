@@ -1,261 +1,280 @@
-# SPOTIFY — Plateforme de streaming musical distribuée
+# Spotify Data Platform — Groupe KFK
 
-> **Formation Data & IA — Master 1 | 35 heures | Groupes de 3-4**
+## 1. Présentation du projet
 
-Vous allez construire **SPOTIFY**, une plateforme de streaming musical complète inspirée de la vraie. De l'ingestion du catalogue jusqu'à la détection de fraude en temps réel, en passant par un réseau peer-to-peer de distribution des morceaux.
+Le projet **Spotify Data Platform** est un projet pédagogique réalisé dans le cadre du Mastère Data & IA à HETIC.
 
-Ce projet se construit **brique par brique sur 5 jours**. Chaque livrable s'appuie sur le précédent. À la fin, votre groupe disposera d'une plateforme opérationnelle — et vous interconnecterez vos instances avec celles des autres groupes pour former un véritable écosystème musical distribué.
+L'objectif est de construire progressivement une plateforme de données inspirée de Spotify, capable de gérer :
 
----
+- la génération de catalogues musicaux ;
+- l'ingestion batch de catalogues depuis MinIO vers PostgreSQL ;
+- la simulation d'événements d'écoute en temps réel ;
+- le traitement d'événements via Redis et Airflow ;
+- la gestion des événements invalides via une Dead Letter Queue ;
+- le calcul d'agrégats journaliers ;
+- la génération de recommandations musicales ;
+- la documentation et les tests du projet ;
+- puis, dans une phase suivante, l'intégration Kafka et Spark Structured Streaming.
 
-## Ce que vous allez construire
+Le groupe travaille sur une branche stable dédiée : **`groupe-kfk/main`**. Toutes les Pull Requests doivent être ouvertes vers cette branche.
 
-```
-Sources ──► Kafka topics ──► Spark Streaming ──► PostgreSQL / Redis
-              │                                         │
-              └──► Airflow DAGs (batch) ────────────────┘
-                                                        │
-                                              MinIO (Parquet)
-```
+## 2. Membres du groupe
 
-| Couche | Technologie | Ce que vous implémentez |
-|--------|-------------|------------------------|
-| Orchestration batch | Apache Airflow 2.x | 5 DAGs + 2 ponts batch/streaming |
-| Messaging | Apache Kafka 3.x (KRaft) | 6 topics internes + 3 inter-groupes |
-| Streaming | Spark 3.5+ Structured Streaming | 3 jobs temps réel |
-| Base de données | PostgreSQL 15+ | Catalogue, événements, agrégats, DLQ |
-| Cache | Redis 7+ | Recommandations, top tracks live |
-| Stockage objet | MinIO (S3-compatible) | Parquet, checkpoints Spark |
-| Simulation | Python (custom) | Simulateur P2P avec mode fraude |
-| Conteneurisation | Docker Compose | Stack complète locale |
+| Membre | Rôle principal |
+|---|---|
+| Steve Landry KOUOKAM NONO | Chef de groupe — coordination, intégration, revue de code, issue #7 |
+| Théophane KENGNI | DAGs Airflow : catalogue, streaming, DLQ |
+| Linda MAKAMTA | Simulateur P2P, pipeline de recommandations |
+| Chantal CAMARA | Modèle de données, tests et documentation |
 
----
+## 3. Répartition des issues
 
-## Progression — Les 3 phases
+| Issue | Intitulé | Responsable | Statut |
+|---|---|---|---|
+| #1 | Setup Docker Compose | Steve | ✅ Terminé |
+| #2 | Documentation du modèle de données (`DATA_MODEL.md`) | Chantal | ✅ Terminé |
+| #3 | Data Generator | Steve | ✅ Terminé |
+| #4 | DAG `catalog_ingestion_pipeline` | Théophane | ✅ Terminé |
+| #5 | Simulateur P2P | Linda | ✅ Terminé |
+| #6 | DAG `streaming_events_pipeline` | Théophane | ✅ Terminé |
+| #7 | DAG `aggregation_pipeline` | Steve | ✅ Terminé |
+| #8 | DAG `recommendation_pipeline` | Linda | ✅ Terminé |
+| #9 | DAG `dlq_reprocessing_pipeline` | Théophane | ✅ Terminé |
+| #10 | Tests et documentation | Chantal | ✅ Terminé |
+| #11 | Kafka KRaft | À planifier | ⏳ À faire |
+| #12 | Simulateur dual Redis + Kafka | À planifier | ⏳ À faire |
+| #13 | Spark Structured Streaming — premier job | À planifier | ⏳ À faire |
+| #14 → #25 | Kafka / Spark / inter-groupes / chaos engineering | À planifier | ⏳ À faire |
 
-### Phase 1 — Data Pipelines Production (Lundi + Mardi, ~14h)
+## 4. Avancement global
 
-Construire le socle batch de SPOTIFY avec Airflow.
+À ce stade, le groupe KFK a traité **10 / 25 issues**, soit environ **40 % du projet**. Toute la **Phase 1 (batch)** est fonctionnelle, de la génération des données jusqu'aux recommandations :
 
-**Issues à fermer : #1 → #10**
-
-```
-#1  Setup Docker Compose
-#2  Schéma PostgreSQL complet
-#3  Data generator (faker)
-#4  DAG catalog_ingestion_pipeline
-#5  Simulateur P2P + Redis pub/sub
-#6  DAG streaming_events_pipeline
-#7  DAG aggregation_pipeline + MinIO
-#8  DAG recommendation_pipeline
-#9  DAG dlq_reprocessing_pipeline
-#10 Tests pytest + README + doc_md
-```
-
-**Critères de validation Phase 1 :**
-- [ ] Les 5 DAGs s'exécutent sans erreur avec le simulateur P2P actif
-- [ ] Le catalogue est peuplé avec les données des 3 labels fournis
-- [ ] Les agrégats sont cohérents avec les données source
-- [ ] Les recommandations sont générées et accessibles dans Redis
-- [ ] La DLQ capture les événements défectueux sans bloquer les pipelines
-- [ ] Une suite pytest couvre structure + transformations
-
----
-
-### Phase 2 — Streaming & Temps Réel (Mercredi PM + Jeudi, ~10h)
-
-Faire évoluer la stack vers le temps réel avec Kafka et Spark.
-
-**Issues à fermer : #11 → #20**
-
-```
-#11 Cluster Kafka KRaft dans docker-compose
-#12 Migration simulateur P2P → Kafka (+ Redis maintenu)
-#13 Premier job Spark : lecture topics, affichage console
-#14 Job streaming_trends_job (fenêtres temporelles)
-#15 Watermarking + gestion late events
-#16 Exactly-once semantics bout-en-bout
-#17 Job streaming_enrichment_job (jointures stream-static)
-#18 Job fraud_detection_job (stateful, flatMapGroupsWithState)
-#19 DAG reconciliation_pipeline (pont batch ↔ streaming)
-#20 DAG late_events_reprocessing
+```text
+Data Generator
+    ↓
+MinIO (bucket labels-raw)
+    ↓
+catalog_ingestion_pipeline
+    ↓
+PostgreSQL (catalogue : genres, artists, albums, tracks)
+    ↓
+P2P Simulator
+    ↓
+Redis DB 1 (listening_events, p2p_network_events)
+    ↓
+streaming_events_pipeline
+    ↓
+PostgreSQL (listening_events) + MinIO (Parquet)
+    ↓
+aggregation_pipeline
+    ↓
+daily_streams + artist_stats
+    ↓
+recommendation_pipeline
+    ↓
+recommendations (PostgreSQL + Redis)
 ```
 
-**Critères de validation Phase 2 :**
-- [ ] Les 3 jobs Spark tournent en continu
-- [ ] Les tendances temps réel se mettent à jour en quelques secondes
-- [ ] La détection de fraude génère des alertes correctes
-- [ ] Après arrêt/relance Spark, reprise sans perte ni doublon
-- [ ] Les agrégats batch et streaming convergent
-- [ ] Les late events sont routés et retraités par Airflow
+## 5. Architecture technique
 
----
+| Composant | Rôle |
+|---|---|
+| Docker Compose | Orchestration locale des services |
+| PostgreSQL | Base relationnelle principale (base métier `spotify`) |
+| Redis | Broker Celery d'Airflow (DB 0) et file d'événements temps réel (DB 1) |
+| MinIO | Stockage objet compatible S3 (Parquet, checkpoints) |
+| Airflow | Orchestration des pipelines batch et streaming léger |
+| Faker | Génération de données réalistes |
+| Python | Développement des DAGs, simulateurs et tests |
+| Kafka | Phase suivante : bus d'événements distribué |
+| Spark | Phase suivante : traitement distribué batch/streaming |
 
-### Phase 3 — Interconnexion inter-groupes (Vendredi matin, ~3h)
+## 6. Structure du dépôt
 
-Connecter votre instance aux instances des autres groupes.
-
-**Issues à fermer : #21 → #25**
-
-```
-#21 Data contracts inter-groupes (formats communs)
-#22 DAG catalog_federation_pipeline
-#23 P2P cross-group (topics partagés)
-#24 Top 50 Global SPOTIFY (agrégation cross-group)
-#25 Chaos engineering + documentation finale
-```
-
-**Critères de validation Phase 3 :**
-- [ ] Catalogue fédéré contient les tracks des autres groupes
-- [ ] Au moins un transfert P2P cross-group fonctionne
-- [ ] Le Top 50 Global agrège les données de tous les groupes
-- [ ] Les données externes invalides partent en DLQ
-- [ ] Un data contract documenté définit les formats inter-groupes
-
----
-
-## Structure du repo
-
-```
-SPOTIFY/
-├── README.md                          ← ce fichier
-├── docker-compose.yml                 ← stack complète (à compléter)
-├── .env.example                       ← variables d'environnement
+```text
+cours_hetic/
 │
-├── dags/                              ← Phase 1 + ponts Phase 2
+├── dags/
 │   ├── catalog_ingestion_pipeline.py
 │   ├── streaming_events_pipeline.py
 │   ├── aggregation_pipeline.py
 │   ├── recommendation_pipeline.py
-│   ├── dlq_reprocessing_pipeline.py
-│   ├── late_events_reprocessing.py    ← Phase 2
-│   ├── reconciliation_pipeline.py     ← Phase 2
-│   ├── catalog_federation_pipeline.py ← Phase 3
-│   └── global_aggregation_pipeline.py ← Phase 3
-│
-├── spark_jobs/                        ← Phase 2
-│   ├── streaming_trends_job.py
-│   ├── streaming_enrichment_job.py
-│   ├── fraud_detection_job.py
-│   └── global_metrics_streaming_job.py ← Phase 3
-│
-├── kafka/
-│   ├── topics_config.yml
-│   ├── schemas/                       ← schémas Avro/JSON
-│   └── cross_group_config.yml         ← Phase 3
-│
-├── contracts/                         ← Phase 3 (inter-groupes)
-│   ├── catalog_federation_schema.json
-│   ├── p2p_cross_request_schema.json
-│   └── global_metrics_schema.json
+│   └── dlq_reprocessing_pipeline.py
 │
 ├── src/
-│   ├── p2p_simulator/                 ← simulateur principal
-│   ├── transformations/               ← fonctions de transformation
-│   └── data_generator/                ← génération de données faker
+│   ├── data_generator/
+│   │   └── generate_catalog.py
+│   └── p2p_simulator/
+│       └── simulator.py
 │
-├── plugins/
-│   ├── operators/                     ← operators Airflow custom
-│   └── hooks/
-│
-├── sql/                               ← scripts SQL init
-├── tests/
-│   ├── unit/
-│   ├── integration/
-│   └── structure/                     ← tests structure DAGs
+├── sql/
+│   └── init_spotify_db.sql
 │
 ├── docs/
-│   ├── ARCHITECTURE.md                ← votre diagramme d'archi
-│   ├── DATA_MODEL.md                  ← votre modèle de données
-│   └── RUNBOOK.md                     ← procédures incidents
+│   ├── DATA_MODEL.md
+│   ├── RUNBOOK.md
+│   ├── TESTING.md
+│   └── daily_reports/
+│       ├── JOUR_1_GROUPE_KFK.md
+│       ├── JOUR_2_GROUPE_KFK.md
+│       └── JOUR_3_GROUPE_KFK.md
 │
-└── solutions/                         ← déverrouillé vendredi soir
+├── tests/
+│   └── unit/
+│
+├── data/
+│   └── labels/
+│
+├── docker-compose.yml
+├── requirements.txt
+├── .env.example
+└── README.md
 ```
 
----
+## 7. Pipelines réalisés
 
-## Démarrage rapide
+### 7.1 Data Generator
+
+Le générateur produit des catalogues musicaux réalistes pour plusieurs labels.
 
 ```bash
-# 1. Cloner et configurer
-git clone https://github.com/<votre-groupe>/spotify-m1.git
-cd spotify-m1
+python -m src.data_generator.generate_catalog --artists 15
+```
+
+Sortie dans `data/labels/`, ensuite uploadée dans le bucket MinIO `labels-raw`.
+
+### 7.2 catalog_ingestion_pipeline
+
+Lit les catalogues JSON depuis MinIO, valide les données, insère les genres, artistes, albums et tracks dans PostgreSQL, et envoie les données invalides en DLQ.
+
+Tables concernées : `genres`, `artists`, `albums`, `tracks`, `dead_letter_events`.
+
+### 7.3 P2P Simulator
+
+Fichier `src/p2p_simulator/simulator.py`. Génère des événements d'écoute et des événements réseau P2P réalistes, récupère les vrais `track_id` depuis PostgreSQL, et pousse les événements dans Redis DB 1 avec `LPUSH`.
+
+```bash
+python -m src.p2p_simulator.simulator --peers 10 --rate 5
+```
+
+Clés Redis utilisées : `listening_events`, `p2p_network_events`.
+
+### 7.4 streaming_events_pipeline
+
+Consomme les événements depuis Redis DB 1 (`RPOP`), les valide, les enrichit avec le catalogue PostgreSQL, écrit les événements enrichis en Parquet dans MinIO, insère les événements valides dans PostgreSQL, et envoie les invalides en DLQ.
+
+Table principale : `listening_events`.
+
+### 7.5 aggregation_pipeline
+
+Calcule les agrégats journaliers par track (top 50), les statistiques journalières par artiste, et des métriques simples sur les événements P2P. Dépend de `streaming_events_pipeline` via un `ExternalTaskSensor`.
+
+Tables alimentées : `daily_streams`, `artist_stats`.
+
+### 7.6 recommendation_pipeline
+
+Génère des recommandations musicales personnalisées à partir des genres et artistes écoutés, pondère par la popularité issue de `daily_streams`, exclut les tracks déjà écoutées, insère les recommandations dans PostgreSQL et les stocke dans Redis avec TTL.
+
+Table alimentée : `recommendations`.
+
+### 7.7 dlq_reprocessing_pipeline
+
+Récupère les événements invalides en statut `pending`, corrige certaines erreurs simples, réinsère les événements valides dans `listening_events`, et passe les événements non retraitables en `retry` puis `abandoned`.
+
+Table concernée : `dead_letter_events`.
+
+## 8. Lancement du projet
+
+### 8.1 Préparer l'environnement
+
+```bash
 cp .env.example .env
 
-# 2. Lancer la stack Phase 1
+python3 -m venv .venv
+source .venv/bin/activate
+
+pip install -r requirements.txt
+```
+
+### 8.2 Lancer les services Docker
+
+```bash
 docker compose up -d
-
-# 3. Vérifier que tout est up
 docker compose ps
-
-# 4. Accéder aux UIs
-# Airflow  : http://localhost:8080  (admin / admin)
-# MinIO    : http://localhost:9001  (minioadmin / minioadmin)
-# Kafka UI : http://localhost:8090  (Phase 2)
 ```
 
----
+| Service | URL / Port |
+|---|---|
+| Airflow | http://localhost:8080 |
+| MinIO Console | http://localhost:9001 |
+| PostgreSQL | localhost:5432 |
+| Redis | localhost:6379 |
 
-## Organisation Git
+## 9. Commandes de validation utiles
 
-```
-main           ← branche stable, protégée
-├── feat/batch-pipelines    ← Phase 1
-├── feat/kafka-streaming    ← Phase 2
-└── feat/inter-group        ← Phase 3
-```
+**Vérifier Airflow** (aucune erreur d'import attendue) :
 
-**Convention des commits :**
-```
-feat(dag): add catalog_ingestion retry logic
-fix(spark): correct watermark threshold on streaming_trends
-docs(readme): update architecture diagram
-test(unit): add transformation tests for enrichment
+```bash
+docker compose exec airflow-scheduler airflow dags list
+docker compose exec airflow-scheduler airflow dags list-import-errors
 ```
 
-**Workflow :**
-1. Créer une branche depuis `main`
-2. Travailler, committer régulièrement
-3. Ouvrir une PR avec description de ce qui est fait
-4. Code review par un membre du groupe
-5. Merge après validation
+**Vérifier PostgreSQL** (base métier `spotify`, user `spotify`) :
 
----
+```bash
+docker compose exec postgres psql -U spotify -d spotify -c "\dt"
+```
 
-## Rôles suggérés
+**Vérifier Redis** (réponse attendue : `PONG`) :
 
-| Rôle | Périmètre principal |
-|------|---------------------|
-| Data Engineer — Batch | DAGs Airflow, ingestion catalogue, agrégation, DLQ, tests |
-| Data Engineer — Streaming | Jobs Spark, topics Kafka, fenêtres temporelles, enrichissement |
-| Data Engineer — Infra & P2P | Docker Compose, cluster Kafka, simulateur P2P, réseau |
-| Data Engineer — Qualité | Exactly-once, watermarking, fraude, réconciliation, recovery |
+```bash
+docker compose exec redis redis-cli ping
+```
 
-> Dans un groupe de 3, fusionner Qualité/Fiabilité avec Streaming. Chaque membre doit comprendre **l'ensemble** de l'architecture.
+**Vérifier la file d'événements (Redis DB 1)** :
 
----
+```bash
+docker compose exec redis redis-cli -n 1 LLEN listening_events
+```
 
-## Ressources
+## 10. Tests unitaires
 
-- [Documentation Airflow 2.x](https://airflow.apache.org/docs/)
-- [Kafka Quickstart](https://kafka.apache.org/quickstart)
-- [Spark Structured Streaming Guide](https://spark.apache.org/docs/latest/structured-streaming-programming-guide.html)
-- [Questions → ouvrir une issue avec le label `question`](../../issues/new?labels=question)
+```bash
+pytest -q                              # tous les tests
+pytest tests/unit/ -v                  # détail des tests unitaires
+```
 
----
+La documentation de test est disponible dans `docs/TESTING.md`.
 
-## Grille d'évaluation
+## 11. Rapports journaliers
 
-| Critère | Poids | Attendu |
-|---------|-------|---------|
-| Architecture & conception | 15% | Diagramme clair, choix justifiés, séparation batch/streaming cohérente |
-| Pipelines batch (Airflow) | 20% | DAGs fonctionnels, robustes, idempotents, parallélisés, testés |
-| Streaming (Kafka + Spark) | 20% | Topics bien conçus, jobs opérationnels, fenêtres correctes |
-| Fiabilité & résilience | 15% | Exactly-once, watermarking, recovery, réconciliation |
-| Interconnexion inter-groupes | 15% | Fédération catalogue, P2P cross-group, classement global |
-| Qualité & documentation | 10% | Tests pytest, README, doc_md, data contracts, code propre |
-| Soutenance & collaboration | 5% | Clarté, chaque membre explique l'ensemble, esprit d'équipe |
+| Jour | Rapport |
+|---|---|
+| Jour 1 | `docs/daily_reports/JOUR_1_GROUPE_KFK.md` |
+| Jour 2 | `docs/daily_reports/JOUR_2_GROUPE_KFK.md` |
+| Jour 3 | `docs/daily_reports/JOUR_3_GROUPE_KFK.md` |
 
----
+## 12. Règles Git du groupe
 
-> **La soutenance finale est une démonstration live, pas un diaporama. Votre meilleur argument est un système qui tourne.**
+- Branche stable : `groupe-kfk/main`
+- Convention de branches : `groupe-kfk/feat/issue-X-description`
+- Travailler sur une branche dédiée, faire des commits réguliers (toutes les 30–45 min)
+- Ouvrir une Pull Request vers `groupe-kfk/main` et faire relire avant merge
+- Ne jamais committer `.env`, `.venv`, `__pycache__`, `.pytest_cache` ni les fichiers générés
+
+## 13. Prochaines étapes — Phase 2 (Kafka + Spark)
+
+| Issue | Sujet | Objectif |
+|---|---|---|
+| #11 | Kafka KRaft | Cluster Kafka sans Zookeeper |
+| #12 | Simulateur dual Redis + Kafka | Publier les événements vers Redis et Kafka |
+| #13 | Spark Structured Streaming | Lire les événements Kafka avec Spark |
+| #14 | Fenêtres temporelles | Tendances sur fenêtres de temps |
+| #15 | Watermark | Gérer les événements en retard |
+| #16 | Exactly-once | Fiabiliser le traitement streaming |
+| #17 → #25 | Enrichissement, fraude, inter-groupes, chaos engineering | Finalisation avancée |
+
+## 14. État actuel
+
+Le socle principal de la plateforme est opérationnel : génération des données, ingestion catalogue, simulation d'événements, traitement Redis, stockage PostgreSQL, stockage objet MinIO, agrégations, recommandations, DLQ, tests et documentation. Le projet est prêt pour la phase suivante : **Kafka + Spark Structured Streaming**.
